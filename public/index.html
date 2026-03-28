@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>CopyServer</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- Pair screen -->
+<div id="pair-screen" class="screen">
+    <div class="pair-box">
+        <h1>CopyServer</h1>
+        <p>Pair this device to start sharing</p>
+        <input type="password" id="passphrase-input" placeholder="Passphrase" autocomplete="off">
+        <input type="text" id="device-name-input" placeholder="Device name (e.g. My Phone)">
+        <button id="pair-btn">Pair</button>
+        <p id="pair-error" class="error"></p>
+    </div>
+</div>
+
+<!-- Main screen -->
+<div id="main-screen" class="screen hidden">
+    <header>
+        <h1>CopyServer</h1>
+        <div class="header-actions">
+            <span id="connection-dot" class="dot disconnected" title="Disconnected"></span>
+            <button id="devices-btn" class="icon-btn" title="Devices">&#9881;</button>
+        </div>
+    </header>
+
+    <!-- Share input -->
+    <div id="share-area">
+        <div id="drop-zone">
+            <textarea id="text-input" placeholder="Type or paste text to share..." rows="3"></textarea>
+            <div class="share-actions">
+                <label class="file-label">
+                    <input type="file" id="file-input" multiple>
+                    <span class="file-btn">File</span>
+                </label>
+                <button id="share-btn">Share</button>
+            </div>
+            <div id="drop-overlay" class="hidden">Drop files here</div>
+        </div>
+        <div id="upload-progress" class="hidden">
+            <div id="upload-bar"></div>
+        </div>
+    </div>
+
+    <!-- Clips list -->
+    <div id="clips-list"></div>
+    <button id="load-more-btn" class="hidden">Load more</button>
+
+    <!-- Devices modal -->
+    <div id="devices-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Devices</h2>
+                <button class="close-btn" id="close-devices">&times;</button>
+            </div>
+            <div id="devices-list"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
