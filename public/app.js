@@ -215,6 +215,64 @@
         input.value = "";
     }
 
+    async function shareClipboard() {
+        const btn = $("#clipboard-btn");
+        try {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                // Check for images or files first
+                const imageType = item.types.find(t => t.startsWith("image/"));
+                if (imageType) {
+                    const blob = await item.getType(imageType);
+                    const ext = imageType.split("/")[1] || "png";
+                    const file = new File([blob], `clipboard.${ext}`, { type: imageType });
+                    await shareFiles([file]);
+                    btn.textContent = "Shared!";
+                    setTimeout(() => btn.textContent = "Clipboard", 1500);
+                    return;
+                }
+                // Fall back to text
+                if (item.types.includes("text/plain")) {
+                    const blob = await item.getType("text/plain");
+                    const text = await blob.text();
+                    if (text.trim()) {
+                        const res = await apiJson("/api/clips/text", { content: text.trim() });
+                        if (res.ok) {
+                            const clip = await res.json();
+                            clip.device_name = device.name;
+                            clips.unshift(clip);
+                            renderClips();
+                        }
+                        btn.textContent = "Shared!";
+                        setTimeout(() => btn.textContent = "Clipboard", 1500);
+                        return;
+                    }
+                }
+            }
+            btn.textContent = "Empty";
+            setTimeout(() => btn.textContent = "Clipboard", 1500);
+        } catch (e) {
+            // Fallback to readText for browsers without clipboard.read()
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.trim()) {
+                    const res = await apiJson("/api/clips/text", { content: text.trim() });
+                    if (res.ok) {
+                        const clip = await res.json();
+                        clip.device_name = device.name;
+                        clips.unshift(clip);
+                        renderClips();
+                    }
+                    btn.textContent = "Shared!";
+                    setTimeout(() => btn.textContent = "Clipboard", 1500);
+                    return;
+                }
+            } catch {}
+            btn.textContent = "No access";
+            setTimeout(() => btn.textContent = "Clipboard", 1500);
+        }
+    }
+
     async function shareFiles(files) {
         for (const file of files) {
             const progress = $("#upload-progress");
@@ -317,28 +375,96 @@
 
     // --- Push notifications ---
 
+    let pushRegistered = false;
+
     async function registerPush() {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+            console.warn("Push not supported in this browser");
+            return;
+        }
 
         try {
             const reg = await navigator.serviceWorker.register("/sw.js");
+            await navigator.serviceWorker.ready;
+
             const keyRes = await api("/api/push/vapid-key");
             const { key } = await keyRes.json();
-            if (!key) return;
+            if (!key) {
+                console.warn("No VAPID public key configured on server");
+                return;
+            }
 
-            const permission = await Notification.requestPermission();
-            if (permission !== "granted") return;
+            // Check existing permission without prompting
+            const current = Notification.permission;
+            if (current === "granted") {
+                await subscribePush(reg, key);
+            } else if (current === "default") {
+                // Show the enable button — permission needs a user gesture
+                showNotificationBanner();
+            }
+        } catch (e) {
+            console.error("Push registration failed:", e);
+        }
+    }
 
+    async function subscribePush(reg, key) {
+        try {
             const sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(key),
             });
-            await api("/api/push/subscribe", {
+            const res = await api("/api/push/subscribe", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(sub.toJSON()),
             });
-        } catch {}
+            if (res.ok) {
+                pushRegistered = true;
+                console.log("Push subscription registered");
+                hideNotificationBanner();
+            } else {
+                console.error("Failed to save push subscription:", res.status);
+            }
+        } catch (e) {
+            console.error("Push subscribe failed:", e);
+        }
+    }
+
+    function showNotificationBanner() {
+        if (pushRegistered || $("#notif-banner")) return;
+        const banner = document.createElement("div");
+        banner.id = "notif-banner";
+        banner.innerHTML = `
+            <span>Enable notifications to get alerts when clips are shared</span>
+            <button id="notif-enable-btn">Enable</button>
+            <button id="notif-dismiss-btn">&times;</button>`;
+        const shareArea = $("#share-area");
+        shareArea.parentNode.insertBefore(banner, shareArea);
+
+        $("#notif-enable-btn").addEventListener("click", async () => {
+            try {
+                console.log("Requesting notification permission...");
+                const permission = await Notification.requestPermission();
+                console.log("Permission result:", permission);
+                if (permission === "granted") {
+                    const reg = await navigator.serviceWorker.ready;
+                    console.log("Service worker ready, fetching VAPID key...");
+                    const keyRes = await api("/api/push/vapid-key");
+                    const { key } = await keyRes.json();
+                    console.log("VAPID key:", key ? key.substring(0, 20) + "..." : "EMPTY");
+                    await subscribePush(reg, key);
+                }
+                hideNotificationBanner();
+            } catch (e) {
+                console.error("Enable notifications failed:", e);
+            }
+        });
+        $("#notif-dismiss-btn").addEventListener("click", hideNotificationBanner);
+    }
+
+    function hideNotificationBanner() {
+        const banner = $("#notif-banner");
+        if (banner) banner.remove();
     }
 
     // --- Devices modal ---
@@ -434,6 +560,7 @@
 
         // Share
         $("#share-btn").addEventListener("click", shareText);
+        $("#clipboard-btn").addEventListener("click", shareClipboard);
         $("#text-input").addEventListener("keydown", (e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) shareText();
         });

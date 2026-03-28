@@ -60,8 +60,6 @@ async def send_push_notifications(clip: dict, exclude_device_id: str = None):
     })
 
     for sub in subs:
-        if sub["id"] in connected:
-            continue
         try:
             webpush(
                 subscription_info=json.loads(sub["push_subscription"]),
@@ -69,5 +67,5 @@ async def send_push_notifications(clip: dict, exclude_device_id: str = None):
                 vapid_private_key=vapid_private,
                 vapid_claims={"sub": vapid_contact},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Push failed for device {sub['id']}: {e}")

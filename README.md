@@ -75,6 +75,78 @@ Note: Tailscale certs auto-renew, but you'll need to restart the server (or re-r
 
 Without HTTPS, everything still works over `http://your-machine:8080` — you just won't get push notifications when the app is closed, and PWA install may not be available.
 
+## Quick sharing
+
+### Clipboard button
+
+The app has a "Clipboard" button that reads your clipboard and shares it (text or images) in one tap.
+
+### iOS Shortcut
+
+Create a Shortcut to share to CopyServer from the iOS Share Sheet:
+
+1. Open the **Shortcuts** app
+2. Create a new Shortcut
+3. Add action: **Receive** input from **Share Sheet** (accept Text, URLs, Images, Files)
+4. Add an **If** action: check if *Shortcut Input* **has any value**
+5. Inside the If:
+   - For text: Add **Get Text from Input**, then **Get Contents of URL**:
+     - URL: `https://YOUR_HOST:PORT/api/clips/text`
+     - Method: POST
+     - Headers: `Authorization: Bearer YOUR_TOKEN`, `Content-Type: application/json`
+     - Body (JSON): `{"content": "Shortcut Input"}`
+   - For files/images: Add **Get Contents of URL**:
+     - URL: `https://YOUR_HOST:PORT/api/clips/file`
+     - Method: POST
+     - Headers: `Authorization: Bearer YOUR_TOKEN`
+     - Body: Form, key `file` = *Shortcut Input*
+6. Name the shortcut "CopyServer" and enable **Show in Share Sheet**
+
+To find your token, open the browser console on iOS and run:
+```js
+localStorage.getItem("copyserver_token")
+```
+
+### Linux script
+
+Save as `copyserver-share.sh` and bind to a keyboard shortcut:
+
+```bash
+#!/bin/bash
+HOST="https://your-machine.tailnet-name.ts.net:8443"
+TOKEN="your-token-here"
+
+# Share clipboard text
+TEXT=$(xclip -selection clipboard -o 2>/dev/null || xsel --clipboard --output 2>/dev/null)
+if [ -n "$TEXT" ]; then
+    curl -s -X POST "$HOST/api/clips/text" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"content\": $(echo "$TEXT" | jq -Rs .)}" > /dev/null
+    notify-send "CopyServer" "Clipboard shared"
+fi
+```
+
+### Windows PowerShell script
+
+Save as `copyserver-share.ps1` and bind to a global hotkey (e.g. via AutoHotkey):
+
+```powershell
+$Host_ = "https://your-machine.tailnet-name.ts.net:8443"
+$Token = "your-token-here"
+
+$text = Get-Clipboard -Raw
+if ($text) {
+    $body = @{ content = $text } | ConvertTo-Json
+    $headers = @{
+        "Authorization" = "Bearer $Token"
+        "Content-Type" = "application/json"
+    }
+    Invoke-RestMethod -Uri "$Host_/api/clips/text" -Method POST -Headers $headers -Body $body
+    [System.Windows.Forms.MessageBox]::Show("Clipboard shared", "CopyServer")
+}
+```
+
 ## Push notifications
 
 Push notifications alert your devices when the app is closed. They require VAPID keys and HTTPS.

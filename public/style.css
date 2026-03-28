@@ -178,12 +178,20 @@ textarea {
 .file-label input { display: none; }
 
 .file-btn,
-#share-btn {
+#share-btn,
+#clipboard-btn {
     padding: 0.6rem 1.2rem;
     border-radius: var(--radius);
     font-weight: 600;
     font-size: 0.9rem;
 }
+
+#clipboard-btn {
+    background: var(--surface2);
+    color: var(--text);
+}
+
+#clipboard-btn:hover { background: #475569; }
 
 .file-btn {
     display: inline-block;
@@ -212,6 +220,40 @@ textarea {
     background: var(--accent);
     width: 0%;
     transition: width 0.3s;
+}
+
+/* Notification banner */
+#notif-banner {
+    max-width: var(--max-w);
+    margin: 0.5rem auto;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text2);
+}
+
+#notif-banner span { flex: 1; }
+
+#notif-enable-btn {
+    padding: 0.4rem 0.8rem;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+#notif-dismiss-btn {
+    background: none;
+    color: var(--text2);
+    font-size: 1.2rem;
+    padding: 0 0.25rem;
 }
 
 /* Clips */
