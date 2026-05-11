@@ -85,27 +85,33 @@ The app has a "Clipboard" button that reads your clipboard and shares it (text o
 
 Create a Shortcut to share to CopyServer from the iOS Share Sheet:
 
+The server has two separate endpoints — `/api/clips/text` for strings and `/api/clips/file` for binary uploads — and it does **not** auto-detect. Your Shortcut needs to branch on the input type and call the right one.
+
+Each **Get Contents of URL** action has four sections that need to be set: **Method** (GET/POST/PUT/PATCH), **Headers**, and **Request Body**. Method and Request Body are separate — set Method to POST first, then expand Request Body to pick `JSON` or `Form`.
+
 1. Open the **Shortcuts** app
 2. Create a new Shortcut
 3. Add action: **Receive** input from **Share Sheet** (accept Text, URLs, Images, Files)
-4. Add an **If** action: check if *Shortcut Input* **has any value**
-5. Inside the If:
-   - For text: Add **Get Text from Input**, then **Get Contents of URL**:
+4. Add **Get Type** of *Shortcut Input* (returns a string like `Text`, `URL`, `Image`, `File`)
+5. Add an **If** action: *Type* **is** `Text`
+   - Inside the If (text branch): **Get Contents of URL**
      - URL: `https://YOUR_HOST:PORT/api/clips/text`
-     - Method: POST
-     - Headers: `Authorization: Bearer YOUR_TOKEN`, `Content-Type: application/json`
-     - Body (JSON): `{"content": "Shortcut Input"}`
-   - For files/images: Add **Get Contents of URL**:
-     - URL: `https://YOUR_HOST:PORT/api/clips/file`
-     - Method: POST
+     - Method: **POST**
      - Headers: `Authorization: Bearer YOUR_TOKEN`
-     - Body: Form, key `file` = *Shortcut Input*
+     - Request Body: **JSON** — add field, key `content`, value *Shortcut Input*
+   - In **Otherwise** (image/file/URL branch): **Get Contents of URL**
+     - URL: `https://YOUR_HOST:PORT/api/clips/file`
+     - Method: **POST**
+     - Headers: `Authorization: Bearer YOUR_TOKEN`
+     - Request Body: **Form** — add field, key `file`, value *Shortcut Input* (Shortcuts auto-sends this as `multipart/form-data` when the value is a file)
 6. Name the shortcut "CopyServer" and enable **Show in Share Sheet**
 
-To find your token, open the browser console on iOS and run:
-```js
-localStorage.getItem("copyserver_token")
-```
+Notes:
+- Don't set `Content-Type` manually. Shortcuts sets it from the Request Body type (`application/json` or `multipart/form-data`); a manual header can collide with the auto-generated one.
+- URLs from the share sheet are usually best routed to the text endpoint so they arrive as a clickable string rather than a downloaded HTML file. The `If Type is Text` branch covers plain text but not `URL` — if you want URLs as text, change the If to `Type is Text` **OR** `Type is URL`, or replace the Get Type check with `If Shortcut Input is of type Text or URL`.
+- If you'd rather not branch, make two separate Shortcuts ("Share text to CopyServer" and "Share file to CopyServer"), each handling one type.
+
+To find your token, open the app, tap the gear icon (top right), and tap **Copy auth token**. The token is copied to your clipboard, ready to paste into the Shortcut.
 
 ### Linux script
 

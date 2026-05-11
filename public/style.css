@@ -409,6 +409,31 @@ textarea {
     padding: 0.25rem 0.5rem;
 }
 
+.token-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface2);
+}
+
+.token-section #copy-token-btn {
+    width: 100%;
+}
+
+.token-hint {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-top: 0.5rem;
+}
+
+#token-field {
+    width: 100%;
+    margin-top: 0.5rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    user-select: all;
+    -webkit-user-select: all;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     header h1 { font-size: 1.05rem; }

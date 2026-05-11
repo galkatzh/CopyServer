@@ -140,12 +140,17 @@ def create_clip(clip_type, device_id, content=None, filename=None, filepath=None
     return dict(row)
 
 
-def list_clips(limit=50, before=None):
+def list_clips(limit=50, before=None, after=None):
     conn = get_db()
     if before:
         rows = conn.execute(
             "SELECT c.*, d.name as device_name FROM clips c JOIN devices d ON c.device_id = d.id WHERE c.created_at < ? ORDER BY c.created_at DESC LIMIT ?",
             (before, limit),
+        ).fetchall()
+    elif after is not None:
+        rows = conn.execute(
+            "SELECT c.*, d.name as device_name FROM clips c JOIN devices d ON c.device_id = d.id WHERE c.created_at >= ? ORDER BY c.created_at DESC LIMIT ?",
+            (after, limit),
         ).fetchall()
     else:
         rows = conn.execute(

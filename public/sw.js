@@ -1,4 +1,4 @@
-const CACHE_NAME = "copyserver-v4";
+const CACHE_NAME = "copyserver-v5";
 const SHELL_FILES = ["/", "/style.css", "/app.js", "/manifest.json"];
 
 self.addEventListener("install", (e) => {

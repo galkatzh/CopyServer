@@ -107,6 +107,27 @@
         $("#load-more-btn").classList.toggle("hidden", data.length < 50);
     }
 
+    async function catchUpClips() {
+        if (!token) return;
+        if (!clips.length) return loadClips();
+        const newest = clips[0].created_at;
+        const res = await api(`/api/clips?after=${newest}&limit=50`);
+        if (!res.ok) return;
+        const data = await res.json();
+        // If we got a full page, we may have missed more — refresh the list entirely.
+        if (data.length >= 50) return loadClips();
+        let added = false;
+        // Server returns DESC; iterate ascending so newest ends up at index 0.
+        for (let i = data.length - 1; i >= 0; i--) {
+            const clip = data[i];
+            if (!clips.find(c => c.id === clip.id)) {
+                clips.unshift(clip);
+                added = true;
+            }
+        }
+        if (added) renderClips();
+    }
+
     function renderClips() {
         const list = $("#clips-list");
         list.innerHTML = "";
@@ -339,6 +360,7 @@
                 }
                 dot.className = "dot connected";
                 dot.title = "Connected";
+                catchUpClips();
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
@@ -496,6 +518,22 @@
         }
     }
 
+    async function revealToken() {
+        const btn = $("#copy-token-btn");
+        const field = $("#token-field");
+        field.value = token || "";
+        try {
+            await navigator.clipboard.writeText(token || "");
+            btn.textContent = "Copied!";
+            setTimeout(() => btn.textContent = "Copy auth token", 1500);
+        } catch {
+            field.classList.remove("hidden");
+            field.focus();
+            field.select();
+            btn.textContent = "Long-press to copy ↓";
+        }
+    }
+
     // --- Drag & drop ---
 
     function setupDragDrop() {
@@ -579,6 +617,8 @@
         // Devices modal
         $("#devices-btn").addEventListener("click", () => {
             $("#devices-modal").classList.remove("hidden");
+            $("#token-field").classList.add("hidden");
+            $("#copy-token-btn").textContent = "Copy auth token";
             loadDevices();
         });
         $("#close-devices").addEventListener("click", () => {
@@ -588,6 +628,13 @@
             if (e.target === $("#devices-modal")) {
                 $("#devices-modal").classList.add("hidden");
             }
+        });
+        $("#copy-token-btn").addEventListener("click", revealToken);
+
+        // Catch up on clips when the app returns to the foreground.
+        // iOS pauses JS in backgrounded PWAs, so the SSE stream may miss events.
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") catchUpClips();
         });
     }
 

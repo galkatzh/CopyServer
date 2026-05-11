@@ -89,8 +89,8 @@ async def verify_token(device=Depends(get_current_device)):
 # --- Clip routes ---
 
 @app.get("/api/clips")
-async def get_clips(before: int = None, limit: int = 50, device=Depends(get_current_device)):
-    clips = db.list_clips(limit=min(limit, 100), before=before)
+async def get_clips(before: int = None, after: int = None, limit: int = 50, device=Depends(get_current_device)):
+    clips = db.list_clips(limit=min(limit, 100), before=before, after=after)
     return clips
 
 
