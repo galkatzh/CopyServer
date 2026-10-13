@@ -64,9 +64,13 @@ Let Tailscale terminate TLS and proxy to the server over plain HTTP. Tailscale f
    tailscale serve --bg --https=443 http://127.0.0.1:8080
    ```
 
-   `--bg` keeps the config active across reboots. Use another port (e.g. `--https=8443`) if 443 is taken. Check it with `tailscale serve status`; turn it off with `tailscale serve --https=443 off`.
+   `--https=443` is the port HTTPS listens on at your tailnet address; 443 is the default, so the URL needs no port. With another port (e.g. `--https=8443`) include it in the URL: `https://your-machine.tailnet-name.ts.net:8443`. The `8080` at the end is only the local port the server listens on, and must match step 1.
+
+   Run this once, by hand. With `--bg` the setting is saved by `tailscaled` itself and survives reboots, so don't add it to the CopyServer service (systemd unit, startup script, etc.) — only the server itself needs to run as a service. Check it with `tailscale serve status`; turn it off with `tailscale serve --https=443 off`.
 
 3. Open `https://your-machine.tailnet-name.ts.net` on your devices.
+
+   A `502` from that address means Tailscale is up but CopyServer isn't running (or is listening on a different host/port than the one passed to `tailscale serve`).
 
 ### Option B: certificate files
 
