@@ -44,7 +44,35 @@ TLS can also be set via CLI flags: `uv run server.py --ssl-certfile cert.pem --s
 
 If your devices are on a Tailscale network, you don't need a reverse proxy. Tailscale encrypts traffic between devices, but you still need HTTPS for PWA install and push notifications to work.
 
-1. Enable HTTPS on your Tailscale node:
+Both options below need MagicDNS and HTTPS certificates enabled for your tailnet (Tailscale admin console → DNS).
+
+### Option A: `tailscale serve` (recommended)
+
+Let Tailscale terminate TLS and proxy to the server over plain HTTP. Tailscale fetches and renews the certificate itself, so it never expires on you and the server never needs a restart.
+
+1. Run the server on localhost without TLS (leave `SSL_CERTFILE`/`SSL_KEYFILE` unset):
+
+   ```
+   uv run server.py --host 127.0.0.1 --port 8080
+   ```
+
+   Binding to `127.0.0.1` means the only way in is through Tailscale's HTTPS endpoint.
+
+2. Expose it over HTTPS on your tailnet:
+
+   ```
+   tailscale serve --bg --https=443 http://127.0.0.1:8080
+   ```
+
+   `--bg` keeps the config active across reboots. Use another port (e.g. `--https=8443`) if 443 is taken. Check it with `tailscale serve status`; turn it off with `tailscale serve --https=443 off`.
+
+3. Open `https://your-machine.tailnet-name.ts.net` on your devices.
+
+### Option B: certificate files
+
+Have the server load the certificate directly.
+
+1. Fetch a certificate:
 
    ```
    tailscale cert your-machine.tailnet-name.ts.net
@@ -71,7 +99,13 @@ If your devices are on a Tailscale network, you don't need a reverse proxy. Tail
 
 3. Open `https://your-machine.tailnet-name.ts.net` on your devices.
 
-Note: Tailscale certs auto-renew, but you'll need to restart the server (or re-run `tailscale cert`) when they rotate.
+The certificate is valid for 90 days and the files on disk are **not** renewed automatically. The server also only reads them at startup. When it expires, browsers show `NET::ERR_CERT_DATE_INVALID`. To avoid that, re-run `tailscale cert` and restart the server periodically, e.g. a weekly cron job:
+
+```
+0 4 * * 0  cd /path/to/CopyServer && tailscale cert your-machine.tailnet-name.ts.net && systemctl restart copyserver
+```
+
+Check when the current certificate expires with `openssl x509 -enddate -noout -in your-machine.tailnet-name.ts.net.crt`.
 
 Without HTTPS, everything still works over `http://your-machine:8080` — you just won't get push notifications when the app is closed, and PWA install may not be available.
 
